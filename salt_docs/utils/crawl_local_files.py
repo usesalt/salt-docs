@@ -71,9 +71,6 @@ def crawl_local_files(
             filepath = os.path.join(root, filename)
             all_files.append(filepath)
 
-    total_files = len(all_files)
-    processed_files = 0
-
     for filepath in all_files:
         relpath = (
             os.path.relpath(filepath, directory) if use_relative_paths else filepath
@@ -99,11 +96,6 @@ def crawl_local_files(
         else:
             included = True
 
-        processed_files += (
-            1  # Increment processed count regardless of inclusion/exclusion
-        )
-
-        status = "processed"
         if not included or excluded:
             print_operation(f"{relpath}", Icons.SKIP, indent=2)
             continue  # Skip to next file if not included or excluded

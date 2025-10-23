@@ -183,7 +183,8 @@ def crawl_github_files(
 
     # Check if URL contains a specific branch/commit
     if len(path_parts) > 2 and "tree" == path_parts[2]:
-        join_parts = lambda i: "/".join(path_parts[i:])
+        def join_parts(i):
+            return "/".join(path_parts[i:])
 
         branches = fetch_branches(owner, repo)
         branch_names = map(lambda branch: branch.get("name"), branches)
@@ -200,15 +201,15 @@ def crawl_github_files(
         ref = next(filter_gen, None)
 
         # If match is not found, check for is it a tree
-        if ref == None:
+        if ref is None:
             tree = path_parts[3]
             ref = tree if check_tree(owner, repo, tree) else None
 
         # If it is neither a tree nor a branch name
-        if ref == None:
+        if ref is None:
             print(
-                f"The given path does not match with any branch and any tree in the repository.\n"
-                f"Please verify the path is exists."
+                "The given path does not match with any branch and any tree in the repository.\n"
+                "Please verify the path exists."
             )
             return
 
@@ -216,8 +217,8 @@ def crawl_github_files(
         part_index = 5 if "/" in ref else 4
         specific_path = join_parts(part_index) if part_index < len(path_parts) else ""
     else:
-        # Dont put the ref param to quiery
-        # and let Github decide default branch
+        # Don't put the ref param to query
+        # and let GitHub decide default branch
         ref = None
         specific_path = ""
 
@@ -228,7 +229,7 @@ def crawl_github_files(
     def fetch_contents(path):
         """Fetch contents of the repository at a specific path and commit"""
         url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
-        params = {"ref": ref} if ref != None else {}
+        params = {"ref": ref} if ref is not None else {}
 
         response = requests.get(url, headers=headers, params=params, timeout=(30, 30))
 

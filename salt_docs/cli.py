@@ -22,11 +22,10 @@ from .flows.flow import create_tutorial_flow
 from .formatter.output_formatter import (
     print_header,
     print_info,
-    print_final_success,
-    format_time
+    print_final_success
 )
 from .metadata.logo import print_logo
-from .metadata import PROJECT_NAME, DESCRIPTION, CLI_ENTRY_POINT
+from .metadata import DESCRIPTION, CLI_ENTRY_POINT
 from .formatter.help_formatter import print_enhanced_help
 
 
@@ -315,7 +314,6 @@ def update_gemini_key():
 
     try:
         import keyring
-
         KEYRING_AVAILABLE = True
     except ImportError:
         KEYRING_AVAILABLE = False
@@ -363,7 +361,6 @@ def update_github_token():
 
     try:
         import keyring
-
         KEYRING_AVAILABLE = True
     except ImportError:
         KEYRING_AVAILABLE = False
