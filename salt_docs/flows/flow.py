@@ -1,6 +1,6 @@
 from pocketflow import Flow
 # Import all node classes from nodes.py
-from nodes.nodes import (
+from salt_docs.nodes.nodes import (
     FetchRepo,
     IdentifyAbstractions,
     AnalyzeRelationships,

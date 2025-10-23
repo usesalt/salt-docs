@@ -2,9 +2,9 @@ import os
 import re
 import yaml
 from pocketflow import Node, BatchNode
-from utils.crawl_github_files import crawl_github_files
-from utils.call_llm import call_llm
-from utils.crawl_local_files import crawl_local_files
+from salt_docs.utils.crawl_github_files import crawl_github_files
+from salt_docs.utils.call_llm import call_llm
+from salt_docs.utils.crawl_local_files import crawl_local_files
 
 
 # Helper to get content for specific file indices
@@ -783,7 +783,7 @@ class GenerateDocContent(Node):
 
     def _generate_combined_content(self, project_name, index_content, chapters_content):
         """Generate the combined documentation file content."""
-        from utils.adjust_headings import adjust_heading_levels, strip_attribution_footer
+        from salt_docs.utils.adjust_headings import adjust_heading_levels, strip_attribution_footer
         
         # Start with H1 repo name
         combined = f"# {project_name}\n\n"

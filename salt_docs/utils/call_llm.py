@@ -26,7 +26,7 @@ cache_file = "llm_cache.json"
 
 
 # By default, we Google Gemini 2.5 pro, as it shows great performance for code understanding
-def call_llm(prompt: str, use_cache: bool = True) -> str:
+def call_llm(prompt: str, use_cache: bool = True, api_key: str = None) -> str:
     # Log the prompt
     logger.info(f"PROMPT: {prompt}")
 
@@ -46,19 +46,23 @@ def call_llm(prompt: str, use_cache: bool = True) -> str:
             logger.info(f"RESPONSE: {cache[prompt]}")
             return cache[prompt]
 
-    # # Call the LLM if not in cache or cache disabled
-    # client = genai.Client(
-    #     vertexai=True,
-    #     # TODO: change to your own project id and location
-    #     project=os.getenv("GEMINI_PROJECT_ID", "your-project-id"),
-    #     location=os.getenv("GEMINI_LOCATION", "us-central1")
-    # )
+    # Get API key with priority: parameter > config > env var > error
+    if not api_key:
+        try:
+            from ..config import get_api_key
+            api_key = get_api_key()
+        except ImportError:
+            # Fallback to environment variable if config module not available
+            api_key = os.getenv("GEMINI_API_KEY", "")
+    
+    if not api_key:
+        raise ValueError(
+            "GEMINI_API_KEY not found. Please run 'salt-docs init' to configure your API key, "
+            "or set the GEMINI_API_KEY environment variable."
+        )
 
-    # You can comment the previous line and use the AI Studio key instead:
-    client = genai.Client(
-        api_key=os.getenv("GEMINI_API_KEY", ""),
-    )
-    # model = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+    # Call the LLM
+    client = genai.Client(api_key=api_key)
     model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     
     response = client.models.generate_content(model=model, contents=[prompt])
