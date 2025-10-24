@@ -8,12 +8,12 @@ import datetime
 # Project info
 PROJECT_NAME = "salt-docs"
 AUTHOR_NAME = "Mithun Ramesh"
-ORGANIZATION = "CONVOLUTION LABS"
-DESCRIPTION = "Intelligent codebase analysis and documentation generation tool"
+ORGANIZATION = "USESALT.CO"
+DESCRIPTION = "Wiki genertor designed for nerds, by nerds."
 
 # Repository info
 REPOSITORY_URL = "https://github.com/convolution-labs/salt-docs-cli"
-HOMEPAGE_URL = "https://github.com/convolution-labs/salt-docs-cli"
+HOMEPAGE_URL = "https://usesalt.co"
 ISSUES_URL = "https://github.com/convolution-labs/salt-docs-cli/issues"
 
 # Dynamic values

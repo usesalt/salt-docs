@@ -15,7 +15,7 @@ flowchart LR
 
 ## Installation
 
-### Option 1: Install from PyPI (when published)
+### Option 1: Install from PyPI
 ```bash
 pip install salt-docs
 ```

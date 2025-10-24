@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2025-01-23
+
+### Added
+- Enhanced init mode with structured tree-based visual design
+- Consistent visual language across all CLI commands
+- Input masking for sensitive data (API keys) in init mode
+- Improved logo visibility on both light and dark terminal backgrounds
+
+### Changed
+- Default max abstractions reduced from 10 to 5 for better performance
+- Init mode now uses same visual design as repo mode (tree structure, icons, colors)
+- Logo colors optimized for universal visibility across terminal themes
+- Streamlined init flow with cleaner input prompts and result display
+
+### Improved
+- Visual consistency between init and repo modes
+- User experience during initial setup
+- Code formatting and linting compliance
+- Overall CLI design coherence
+
 ## [0.1.2] - 2025-01-23
 
 ### Added

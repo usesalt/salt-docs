@@ -26,26 +26,35 @@ DEFAULT_OUTPUT_DIR = Path.home() / "Documents" / "Salt Docs"
 
 def init_config() -> None:
     """Interactive setup wizard for init command."""
-    from .metadata.logo import print_logo
-
-    print_logo()
-    print()  # Blank line for spacing
+    from .formatter.init_formatter import (
+        print_init_header,
+        print_section_start,
+        print_input_prompt,
+        print_init_complete,
+    )
+    from .formatter.output_formatter import Icons
 
     # Create directories
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Welcome to Salt Docs! Let's set up your configuration")
-    print(f"Configuration will be saved to (Default): {CONFIG_FILE}")
-    print(f"Default output directory: {DEFAULT_OUTPUT_DIR}\n")
+    print_init_header()
 
-    # Collect API keys
-    gemini_key = input("Enter your Gemini API key: ").strip()
+    # API Keys section
+    print_section_start("API Keys", Icons.INFO)
+
+    # Gemini API Key
+    print_input_prompt("Gemini API Key", Icons.ANALYZING, is_required=True)
+    gemini_key = input().strip()
     if not gemini_key:
         print("✘ Gemini API key is required!")
         sys.exit(1)
 
-    github_token = input("Enter GitHub token (optional, press Enter to skip): ").strip()
+    # GitHub Token
+    print_input_prompt(
+        "GitHub Token", Icons.ANALYZING, is_required=False, default_value="skip"
+    )
+    github_token = input().strip()
 
     # Store in keyring if available, otherwise save to config
     keyring_available = KEYRING_AVAILABLE
@@ -54,31 +63,43 @@ def init_config() -> None:
             keyring.set_password("salt-docs", "gemini_api_key", gemini_key)
             if github_token:
                 keyring.set_password("salt-docs", "github_token", github_token)
-            print("✓ API keys saved securely using keyring")
-        except Exception as e:
-            print(f"⚠ Keyring failed ({e}), saving to config file")
+        except Exception:
             keyring_available = False
 
-    if not keyring_available:
-        print("⚠ Keyring not available, saving to config file (less secure)")
+    # Preferences section
+    print_section_start("Preferences", Icons.INFO)
 
-    # Collect other preferences
-    output_dir = input(f"Default output directory [{DEFAULT_OUTPUT_DIR}]: ").strip()
+    # Output Directory
+    print_input_prompt(
+        "Output Directory",
+        Icons.CONFIG,
+        is_required=False,
+        default_value=str(DEFAULT_OUTPUT_DIR),
+    )
+    output_dir = input().strip()
     if not output_dir:
         output_dir = str(DEFAULT_OUTPUT_DIR)
 
-    language = input("Default language [english]: ").strip()
+    # Language
+    print_input_prompt(
+        "Language", Icons.CONFIG, is_required=False, default_value="english"
+    )
+    language = input().strip()
     if not language:
         language = "english"
 
-    max_abstractions = input("Default max abstractions [10]: ").strip()
-    if not max_abstractions:
-        max_abstractions = 10
+    # Max Abstractions
+    print_input_prompt(
+        "Max Abstractions", Icons.CONFIG, is_required=False, default_value="5"
+    )
+    max_abstractions_input = input().strip()
+    if not max_abstractions_input:
+        max_abstractions = 5
     else:
         try:
-            max_abstractions = int(max_abstractions)
+            max_abstractions = int(max_abstractions_input)
         except ValueError:
-            max_abstractions = 10
+            max_abstractions = 5
 
     # Build configuration
     config = {
@@ -100,9 +121,8 @@ def init_config() -> None:
     # Save configuration
     save_config(config)
 
-    print(f"\n✓ Configuration saved to {CONFIG_FILE}")
-    print(f"✓ Default output location: {output_dir}")
-    print("\nYou can now run: salt-docs --repo <url>")
+    # Print completion message
+    print_init_complete(CONFIG_FILE, output_dir, keyring_available)
 
 
 def load_config() -> Dict[str, Any]:

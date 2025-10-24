@@ -22,6 +22,7 @@ from .flows.flow import create_tutorial_flow
 from .formatter.output_formatter import print_header, print_info, print_final_success
 from .metadata.logo import print_logo
 from .metadata import DESCRIPTION, CLI_ENTRY_POINT
+from .metadata.version import get_version
 from .formatter.help_formatter import print_enhanced_help
 
 
@@ -58,6 +59,11 @@ def main():
     # Add custom help option
     parser.add_argument(
         "-h", "--help", action="store_true", help="Show enhanced help message and exit"
+    )
+
+    # Add version option
+    parser.add_argument(
+        "-v", "--version", action="version", version=f"salt-docs {get_version()}"
     )
 
     # Create mutually exclusive group for source

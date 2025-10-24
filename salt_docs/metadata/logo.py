@@ -4,20 +4,20 @@ from .project import ORGANIZATION
 
 
 def print_logo():
-    """Print the Salt Docs ASCII logo with grayscale colors."""
-    # ANSI color codes
-    WHITE = "\033[38;5;255m"
-    GRAY = "\033[38;5;245m"
+    """Print the Salt Docs ASCII logo with simple gray colors."""
+    # Simple colors that work well on both light and dark backgrounds
+    LOGO_COLOR = "\033[38;5;240m"  # Medium gray - visible everywhere
+    ATTRIB_COLOR = "\033[38;5;245m"  # Light gray
     RESET = "\033[0m"
 
-    logo = f"""{WHITE}
+    logo = f"""{LOGO_COLOR}
 ██╗   ██╗      ███████╗ ███████╗ ██╗   ████████╗
   ██║   ██║    ██╔════╝ ██╔══██║ ██║   ╚══██╔══╝
     ██║   ██║  ███████╗ ███████║ ██║      ██║
   ██║   ██║    ╚════██║ ██╔══██║ ██║      ██║
-██║   ██║      ███████║ ██║  ██║ ███████╗ ██║       
+██║   ██║      ███████║ ██║  ██║ ███████╗ ██║
 ╚═╝   ╚═╝      ╚══════╝ ╚═╝  ╚═╝ ╚══════╝ ╚═╝
 {RESET}
-{GRAY}BUILT WITH ♥ BY {ORGANIZATION}{RESET}
+{ATTRIB_COLOR}BUILT WITH ♥ BY MITHUN RAMESH ({ORGANIZATION}){RESET}
 """
     print(logo)
