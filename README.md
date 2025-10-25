@@ -1,6 +1,6 @@
 # Salt Docs CLI
 
-AI-powered tool that analyzes codebases and generates beginner-friendly documentation.
+Wiki's for nerds, by nerds
 
 ## How it works
 
