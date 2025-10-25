@@ -5,11 +5,13 @@ from pathlib import Path
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+
 # Read metadata from pyproject.toml
 def get_version():
     with open("pyproject.toml", "rb") as f:
         pyproject_data = tomllib.load(f)
     return pyproject_data["project"]["version"]
+
 
 # Static metadata
 PROJECT_NAME = "salt-docs"

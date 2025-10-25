@@ -20,14 +20,14 @@ from .config import (
 from .defaults import DEFAULT_INCLUDE_PATTERNS, DEFAULT_EXCLUDE_PATTERNS
 from .flows.flow import create_tutorial_flow
 from .formatter.output_formatter import (
-    print_header, 
-    print_info, 
+    print_header,
+    print_info,
     print_final_success,
     print_error_missing_api_key,
     print_error_invalid_api_key,
     print_error_rate_limit,
     print_error_network,
-    print_error_general
+    print_error_general,
 )
 from .metadata.logo import print_logo
 from .metadata import DESCRIPTION, CLI_ENTRY_POINT
@@ -232,11 +232,19 @@ def main():
     except Exception as e:
         # Check error type and show appropriate message
         error_str = str(e).lower()
-        if "401" in error_str or "unauthorized" in error_str or "invalid api key" in error_str:
+        if (
+            "401" in error_str
+            or "unauthorized" in error_str
+            or "invalid api key" in error_str
+        ):
             print_error_invalid_api_key()
         elif "rate limit" in error_str or "429" in error_str:
             print_error_rate_limit()
-        elif "connection" in error_str or "timeout" in error_str or "network" in error_str:
+        elif (
+            "connection" in error_str
+            or "timeout" in error_str
+            or "network" in error_str
+        ):
             print_error_network()
         else:
             print_error_general(e)
