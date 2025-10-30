@@ -3,6 +3,7 @@ Output formatting utilities for Salt Docs CLI.
 Provides tree-structured output with icons, colors, and timing.
 """
 
+
 # ANSI 256-color codes (work on both light and dark backgrounds)
 class Colors:
     WHITE = "\033[38;5;255m"  # Phase headers, success
