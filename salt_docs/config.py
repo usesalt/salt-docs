@@ -256,7 +256,7 @@ def update_last_check_timestamp() -> None:
 def get_output_dir() -> Path:
     """
     Get the output directory from config or use default.
-    
+
     Returns:
         Path to the output directory
     """
@@ -268,5 +268,5 @@ def get_output_dir() -> Path:
     except Exception:
         # If config loading fails, fallback to default
         pass
-    
+
     return DEFAULT_OUTPUT_DIR
