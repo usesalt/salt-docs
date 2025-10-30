@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.8] - 2025-01-28
+
+### Changed
+- **Cross-platform config directory** - Migrated config file location to OS-appropriate directories
+  - macOS/Linux: `~/.config/saltdocs/config.json` (or `$XDG_CONFIG_HOME/saltdocs/config.json`)
+  - Windows: `%APPDATA%\saltdocs\config.json`
+  - Previous location: `~/Documents/Salt Docs/.salt/config.json` (no longer used)
+
+### Improved
+- Automatic migration from legacy config location on first load
+- Platform-specific config path resolution for better OS conventions
+- Updated documentation to reflect new config locations
+- Better Windows support with proper `%APPDATA%` usage
+- Code formatting with black
+
 ## [0.1.7] - 2025-01-28
 
 ### Added

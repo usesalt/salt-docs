@@ -825,7 +825,7 @@ class GenerateDocContent(Node):
     def prep(self, shared):
         project_name = shared["project_name"]
         output_base_dir = shared.get("output_dir", "output")  # Default output dir
-        output_path = os.path.join(output_base_dir, project_name)
+        output_path = output_base_dir
         repo_url = shared.get("repo_url")  # Get the repository URL
 
         # Get potentially translated data

@@ -278,7 +278,7 @@ Its core responsibilities include:
 This component acts as the central repository for all application-wide settings and sensitive user data. It strategically separates non-sensitive configuration from sensitive credentials to apply the most appropriate storage mechanism for each.
 
 1.  **Request from CLI**: When a user runs a `salt-docs` command, the [CLI Command & Argument Parsing](01_cli_command___argument_parsing_.md) component first checks if specific options are provided. If not, it requests default values from this `Configuration & Credential Management` component.
-2.  **Configuration File Handling**: For general preferences (e.g., `output_dir`, `language`, `use_cache`), a designated `config.json` file is read from or written to. This file typically resides in a user-specific, hidden directory.
+2.  **Configuration File Handling**: For general preferences (e.g., `output_dir`, `language`, `use_cache`), a designated `config.json` file is read from or written to. This file resides in a user-specific configuration directory: `~/.config/saltdocs/config.json` on macOS/Linux (or `$XDG_CONFIG_HOME/saltdocs/config.json`), and `%APPDATA%\saltdocs\config.json` on Windows.
 3.  **System Keyring Interaction**: For sensitive data (API keys, tokens), the component interacts with the operating system's secure keyring service. This leverages platform-specific security features (e.g., macOS Keychain, Windows Credential Manager, Linux Secret Service) to store credentials encrypted and isolated from regular files.
 4.  **Data Provisioning**: Once retrieved, the configuration settings and credentials are provided to the requesting component (e.g., [LLM Integration & Response Caching](04_llm_integration___response_caching_.md) for API keys, or [Documentation Generation & Output Formatting](05_documentation_generation___output_formatting_.md) for output preferences).
 5.  **Update Handling**: When `salt-docs config set` or `salt-docs config update-*` commands are executed, this component is responsible for validating the input and persisting the changes to the correct storage (either `config.json` or the system keyring).
@@ -321,26 +321,25 @@ sequenceDiagram
 
 The configuration logic is primarily managed by a `ConfigManager` and a `KeyringManager`, with utility functions for determining file paths.
 
-##### 1. Configuration File Path (`salt_docs/utils/paths.py`)
+##### 1. Configuration File Path
 
 A utility function ensures that the `config.json` file is stored in a consistent, user-specific location, often within a dedicated application directory.
 
 ```python
-# salt_docs/utils/paths.py (simplified)
 from pathlib import Path
-import os
+import os, sys
 
-def get_base_config_dir() -> Path:
-    """Returns the base directory for Salt Docs configuration."""
-    home_dir = Path.home()
-    # Default path: ~/Documents/Salt Docs/.salt
-    return home_dir / "Documents" / "Salt Docs" / ".salt"
+def get_platform_config_base() -> Path:
+    home = Path.home()
+    if sys.platform.startswith("win"):
+        return Path(os.environ.get("APPDATA", home / "AppData" / "Roaming"))
+    # macOS/Linux follow XDG-style
+    return Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
 
 def get_config_filepath() -> Path:
-    """Returns the full path to the configuration JSON file."""
-    return get_base_config_dir() / "config.json"
+    return get_platform_config_base() / "saltdocs" / "config.json"
 ```
-**Explanation**: This snippet defines how the application determines the canonical location for its `config.json` file. It constructs a platform-independent path, typically within the user's home directory. The `get_base_config_dir()` function ensures that the parent directory exists before attempting to create or access the `config.json` file.
+**Explanation**: The config file follows OS conventions: XDG on macOS/Linux and `%APPDATA%` on Windows. This ensures predictable, user-appropriate locations.
 
 ##### 2. Configuration Manager (`salt_docs/config_manager.py`)
 

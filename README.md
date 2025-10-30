@@ -6,49 +6,22 @@ Wiki's for nerds, by nerds
 
 ```mermaid
 flowchart TD
-    subgraph Sources["Input Sources"]
-        GH[GitHub Repository]
-        Local[Local Directory]
+    GH[GitHub] --> Pipeline
+    Local[Local Dir] --> Pipeline
+
+    subgraph Pipeline["⚙️ Processing Pipeline"]
+        Crawl[Crawl & Analyze\nExtract + Parse] --> Identify[LLM Identify\nAbstractions]
+        Identify --> Generate[Generate Docs\nMarkdown Output]
     end
-    
-    subgraph Pipeline["Processing Pipeline"]
-        Crawl[Crawl Files<br/>Extract code structure]
-        Analyze[Analyze Structure<br/>Parse modules & classes]
-        Identify[Identify Abstractions<br/>LLM-powered analysis]
-        Generate[Generate Documentation<br/>Create markdown content]
-    end
-    
-    subgraph Output["Documentation"]
-        Docs[Markdown Files<br/>Organized wiki structure]
-    end
-    
-    subgraph MCP["MCP Server"]
-        Server[MCP Server<br/>Exposes docs as tools]
-        Tools["Tools:<br/>• list_docs<br/>• doc_id<br/>• get_docs"]
-    end
-    
-    subgraph Consumers["AI Assistants"]
-        Cursor[Cursor]
-        Claude[Claude Desktop]
-        Continue[Continue.dev]
-    end
-    
-    Sources --> Crawl
-    Crawl --> Analyze
-    Analyze --> Identify
-    Identify --> Generate
-    Generate --> Docs
-    Docs --> Server
-    Server --> Tools
-    Tools --> Cursor
-    Tools --> Claude
-    Tools --> Continue
-    
-    style Sources fill:#e1f5ff
-    style Pipeline fill:#fff4e1
-    style Output fill:#e8f5e9
-    style MCP fill:#f3e5f5
-    style Consumers fill:#fce4ec
+
+    Generate --> Docs[Wiki Files]
+    Docs --> Server[MCP Server]
+    Server --> Tools["Tools:\nlist_docs | doc_id | get_docs"]
+
+    Tools --> Cursor[Cursor]
+    Tools --> Claude[Claude]
+    Tools --> Continue[LLM's]
+
 ```
 
 ## Installation
@@ -94,12 +67,15 @@ salt-docs --dir /path/to/your/codebase
 
 #### With custom options
 ```bash
-salt-docs --repo https://github.com/username/repo --output /custom/path --language spanish --max-abstractions 15
+salt-docs --repo https://github.com/username/repo --output /custom/path --language spanish --max-abstractions 10
 ```
 
 ## Configuration
 
-Salt Docs stores configuration in `~/Documents/Salt Docs/.salt/config.json` and uses your system's keyring for secure API key storage.
+Salt Docs stores configuration in a per-user config file and uses your system's keyring for secure API key storage.
+
+- macOS/Linux: `~/.config/saltdocs/config.json` (or `$XDG_CONFIG_HOME/saltdocs/config.json`)
+- Windows: `%APPDATA%\saltdocs\config.json`
 
 ### Configuration Options
 - `output_dir`: Default output directory
@@ -153,10 +129,11 @@ Salt Docs includes an MCP (Model Context Protocol) server that exposes your gene
 
 ### MCP Tools Available
 
-The MCP server provides three tools:
+The MCP server provides these tools:
 - `list_docs` - List all available documentation files
-- `doc_id` - Get the ID/path for a specific documentation resource
-- `get_docs` - Fetch the full content of a documentation file
+- `get_docs` - Fetch the full content of a documentation file (by resource name or absolute path)
+- `search_docs` - Full-text search across documentation (paths, names, and resource names)
+- `index_directories` - Index directories for fast searching
 
 ### Setup Instructions
 

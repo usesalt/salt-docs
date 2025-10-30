@@ -19,10 +19,74 @@ except ImportError:
 
 from .defaults import DEFAULT_CONFIG
 
+
+def _get_platform_config_base() -> Path:
+    """
+    Return the OS-appropriate user config base directory.
+
+    - macOS: ~/Library/Application Support
+    - Windows: %APPDATA%
+    - Linux/other: $XDG_CONFIG_HOME or ~/.config
+    """
+    home = Path.home()
+    if sys.platform.startswith("win"):
+        appdata = os.environ.get("APPDATA")
+        return Path(appdata) if appdata else home / "AppData" / "Roaming"
+    elif sys.platform == "darwin":
+        # Follow XDG-style on macOS per project preference
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        return Path(xdg) if xdg else home / ".config"
+    else:
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        return Path(xdg) if xdg else home / ".config"
+
+
+def _get_new_config_dir() -> Path:
+    """Return the new config directory for saltdocs under the platform base."""
+    return _get_platform_config_base() / "saltdocs"
+
+
+def _get_legacy_config_dir() -> Path:
+    """Return the previous Documents-based config directory (for migration)."""
+    return Path.home() / "Documents" / "Salt Docs" / ".salt"
+
+
 # Configuration paths
-CONFIG_DIR = Path.home() / "Documents" / "Salt Docs" / ".salt"
+CONFIG_DIR = _get_new_config_dir()
 CONFIG_FILE = CONFIG_DIR / "config.json"
 DEFAULT_OUTPUT_DIR = Path.home() / "Documents" / "Salt Docs"
+
+
+def _migrate_legacy_config_if_needed() -> None:
+    """
+    If a legacy config exists in the old Documents path and the new config
+    doesn't exist yet, migrate the file and directory.
+    """
+    legacy_dir = _get_legacy_config_dir()
+    legacy_file = legacy_dir / "config.json"
+    if CONFIG_FILE.exists():
+        return
+    if legacy_file.exists():
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        try:
+            # Copy then remove legacy to be safe
+            with open(legacy_file, "r", encoding="utf-8") as f:
+                data = f.read()
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                f.write(data)
+            # best-effort cleanup of empty legacy dir
+            try:
+                legacy_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+            try:
+                # remove legacy dir if empty
+                legacy_dir.rmdir()
+            except Exception:
+                pass
+        except Exception:
+            # Ignore migration errors — user can re-init
+            pass
 
 
 def init_config() -> None:
@@ -129,6 +193,9 @@ def init_config() -> None:
 def load_config() -> Dict[str, Any]:
     """Load configuration from file and keyring."""
     config = DEFAULT_CONFIG.copy()
+
+    # Attempt migration from legacy location
+    _migrate_legacy_config_if_needed()
 
     # Load from file if it exists
     if CONFIG_FILE.exists():
