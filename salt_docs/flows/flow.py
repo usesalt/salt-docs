@@ -12,8 +12,8 @@ from salt_docs.nodes.nodes import (
 )
 
 
-def create_tutorial_flow():
-    """Creates and returns the codebase tutorial generation flow."""
+def create_wiki_flow():
+    """Creates and returns the codebase wiki generation flow."""
 
     # Instantiate nodes
     fetch_repo = FetchRepo()
@@ -33,6 +33,6 @@ def create_tutorial_flow():
     generate_doc_content >> write_doc_files
 
     # Create the flow starting with FetchRepo
-    tutorial_flow = Flow(start=fetch_repo)
+    wiki_flow = Flow(start=fetch_repo)
 
-    return tutorial_flow
+    return wiki_flow

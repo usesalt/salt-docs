@@ -18,6 +18,6 @@ def print_logo():
 ██║   ██║      ███████║ ██║  ██║ ███████╗ ██║
 ╚═╝   ╚═╝      ╚══════╝ ╚═╝  ╚═╝ ╚══════╝ ╚═╝
 {RESET}
-{ATTRIB_COLOR}BUILT WITH ♥ BY MITHUN RAMESH ({ORGANIZATION}){RESET}
+{ATTRIB_COLOR}COOKED WITH LOT OF ♥ BY {ORGANIZATION}{RESET}
 """
     print(logo)

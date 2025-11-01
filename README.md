@@ -1,4 +1,4 @@
-# Salt Docs CLI
+# Salt Docs
 
 Wiki's for nerds, by nerds
 
@@ -9,14 +9,14 @@ flowchart TD
     GH[GitHub] --> Pipeline
     Local[Local Dir] --> Pipeline
 
-    subgraph Pipeline["⚙️ Processing Pipeline"]
-        Crawl[Crawl & Analyze\nExtract + Parse] --> Identify[LLM Identify\nAbstractions]
-        Identify --> Generate[Generate Docs\nMarkdown Output]
+    subgraph Pipeline["Processing Pipeline"]
+        Crawl[Crawl & Analyze = Extract + Parse] --> Identify[LLM Identify = Abstractions]
+        Identify --> Generate[Generate Wiki's = Markdown Output]
     end
 
     Generate --> Docs[Wiki Files]
     Docs --> Server[MCP Server]
-    Server --> Tools["Tools:\nlist_docs | doc_id | get_docs"]
+    Server --> Tools["Tools: list_docs | doc_id | get_docs"]
 
     Tools --> Cursor[Cursor]
     Tools --> Claude[Claude]

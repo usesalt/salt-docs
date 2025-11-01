@@ -3,6 +3,7 @@ CLI entry point for Salt Docs.
 """
 
 import sys
+import os
 import argparse
 import time
 
@@ -16,7 +17,7 @@ from .config import (
     update_last_check_timestamp,
 )
 from .defaults import DEFAULT_INCLUDE_PATTERNS, DEFAULT_EXCLUDE_PATTERNS
-from .flows.flow import create_tutorial_flow
+from .flows.flow import create_wiki_flow
 from .formatter.output_formatter import (
     print_header,
     print_info,
@@ -33,6 +34,129 @@ from .metadata import DESCRIPTION, CLI_ENTRY_POINT
 from .metadata.version import get_version
 from .formatter.help_formatter import print_enhanced_help
 from .utils.version_check import check_for_update
+
+
+def _is_url(source: str) -> bool:
+    """Detect if source is a URL (GitHub/GitLab) or local path."""
+    if not source:
+        return False
+    return (
+        source.startswith("http://")
+        or source.startswith("https://")
+        or source.startswith("git@")
+        or source.startswith("ssh://")
+        or "github.com" in source
+        or "gitlab.com" in source
+        or "bitbucket.org" in source
+    )
+
+
+def _run_documentation_generation(repo_url, local_dir, args, config):
+    """Shared logic for running documentation generation."""
+    # Get GitHub token from argument, config, or environment variable
+    github_token = None
+    if repo_url:
+        github_token = (
+            args.token or config.get("github_token") or sys.environ.get("GITHUB_TOKEN")
+        )
+        if not github_token:
+            print(
+                "⚠ Warning: No GitHub token provided.\n"
+                "  • For public repos: Optional, but you may hit rate limits (60 requests/hour)\n"
+                "  • For private repos: Required for access\n"
+                f"  • To add a token: Run '{CLI_ENTRY_POINT} config update-github-token'"
+            )
+
+    # Merge config with CLI args (CLI takes precedence)
+    final_config = merge_config_with_args(config, args)
+
+    # Initialize the shared dictionary with inputs
+    shared = {
+        "repo_url": repo_url,
+        "local_dir": local_dir,
+        "project_name": args.name,  # Can be None, FetchRepo will derive it
+        "github_token": github_token,
+        "output_dir": final_config[
+            "output_dir"
+        ],  # Base directory for CombineWiki output
+        # Add include/exclude patterns and max file size
+        "include_patterns": (
+            set(final_config["include_patterns"])
+            if final_config.get("include_patterns")
+            else DEFAULT_INCLUDE_PATTERNS
+        ),
+        "exclude_patterns": (
+            set(final_config["exclude_patterns"])
+            if final_config.get("exclude_patterns")
+            else DEFAULT_EXCLUDE_PATTERNS
+        ),
+        "max_file_size": final_config["max_file_size"],
+        # Add language for multi-language support
+        "language": final_config["language"],
+        # Add use_cache flag (inverse of no-cache flag)
+        "use_cache": final_config["use_cache"],
+        # Add max_abstraction_num parameter
+        "max_abstraction_num": final_config["max_abstractions"],
+        # Outputs will be populated by the nodes
+        "files": [],
+        "abstractions": [],
+        "relationships": {},
+        "component_order": [],
+        "components": [],
+        "final_output_dir": None,
+    }
+
+    # Display logo and starting message with repository/directory and language
+    print_logo()
+    print()  # Blank line for spacing
+    print_header()  # Version will be read from pyproject.toml
+    print_info("Repository", repo_url or local_dir)
+    print_info("Language", final_config["language"].capitalize())
+    print_info("LLM caching", "Enabled" if final_config["use_cache"] else "Disabled")
+
+    # Create the flow instance
+    wiki_flow = create_wiki_flow()
+
+    # Run the flow
+    start_time = time.time()
+    try:
+        wiki_flow.run(shared)
+        total_time = time.time() - start_time
+
+        # Print final success message
+        print_final_success(
+            "Success! Documents generated", total_time, shared["final_output_dir"]
+        )
+
+        # Check for updates (non-blocking, only if 24 hours have passed)
+        _check_for_updates_quietly()
+    except ValueError as e:
+        # Handle missing/invalid API key
+        if "GEMINI_API_KEY not found" in str(e):
+            print_error_missing_api_key()
+        else:
+            print_error_general(e)
+        sys.exit(1)
+    except (IOError, OSError, ConnectionError, TimeoutError) as e:
+        # Check error type and show appropriate message
+        error_str = str(e).lower()
+        if (
+            "401" in error_str
+            or "unauthorized" in error_str
+            or "invalid api key" in error_str
+        ):
+            print_error_invalid_api_key()
+        elif "rate limit" in error_str or "429" in error_str:
+            print_error_rate_limit()
+        elif (
+            "connection" in error_str
+            or "timeout" in error_str
+            or "network" in error_str
+        ):
+            print_error_network()
+        else:
+            print_error_general(e)
+        sys.exit(1)
 
 
 def main():
@@ -52,6 +176,139 @@ def main():
         from .mcp.server import run_mcp_server
 
         run_mcp_server()
+        return
+
+    # Handle 'run' subcommand
+    if len(sys.argv) > 1 and sys.argv[1] == "run":
+        # Extract source argument (if provided, and not a flag)
+        source = None
+        remaining_args = []
+
+        if len(sys.argv) > 2 and not sys.argv[2].startswith("-"):
+            source = sys.argv[2]
+            remaining_args = sys.argv[3:]  # Arguments after 'run source'
+        else:
+            remaining_args = sys.argv[2:]  # Arguments after 'run' (no source)
+
+        # Determine repo_url or local_dir based on source
+        if source:
+            if _is_url(source):
+                repo_url = source
+                local_dir = None
+            else:
+                repo_url = None
+                local_dir = source
+        else:
+            # No source provided, use current directory
+            repo_url = None
+            local_dir = os.getcwd()
+
+        # Temporarily modify sys.argv to parse remaining arguments
+        original_argv = sys.argv[:]
+        try:
+            sys.argv = [sys.argv[0]] + remaining_args
+
+            # Check if config exists, if not, prompt user to run init
+            if not check_config_exists():
+                print("✘ Salt Docs is not configured yet.")
+                print(
+                    f"Please run '{CLI_ENTRY_POINT} init' to set up your configuration first."
+                )
+                sys.exit(1)
+
+            # Load saved configuration
+            config = load_config()
+
+            # Parse remaining arguments with enhanced help
+            parser = argparse.ArgumentParser(
+                description=DESCRIPTION,
+                formatter_class=argparse.RawDescriptionHelpFormatter,
+                add_help=False,  # Disable default help to use our custom one
+            )
+
+            # Add custom help option
+            parser.add_argument(
+                "-h",
+                "--help",
+                action="store_true",
+                help="Show enhanced help message and exit",
+            )
+
+            # Add version option
+            parser.add_argument(
+                "-v",
+                "--version",
+                action="version",
+                version=f"salt-docs {get_version()}",
+            )
+
+            parser.add_argument(
+                "-n",
+                "--name",
+                help="Project name (optional, derived from repo/directory if omitted).",
+            )
+            parser.add_argument(
+                "-t",
+                "--token",
+                help="GitHub personal access token (optional, reads from GITHUB_TOKEN env var if not provided).",
+            )
+            parser.add_argument(
+                "-o",
+                "--output",
+                default=config.get("output_dir", "output"),
+                help="Base directory for output (default: from config).",
+            )
+            parser.add_argument(
+                "-i",
+                "--include",
+                nargs="+",
+                help="Include file patterns (e.g. '*.py' '*.js'). Defaults to common code files if not specified.",
+            )
+            parser.add_argument(
+                "-e",
+                "--exclude",
+                nargs="+",
+                help="Exclude file patterns (e.g. 'tests/*' 'docs/*'). Defaults to test/build directories if not specified.",
+            )
+            parser.add_argument(
+                "-s",
+                "--max-size",
+                type=int,
+                default=config.get("max_file_size", 100000),
+                help="Maximum file size in bytes (default: from config).",
+            )
+            # Add language parameter for multi-language support
+            parser.add_argument(
+                "--language",
+                default=config.get("language", "english"),
+                help="Language for the generated wiki (default: from config)",
+            )
+            # Add use_cache parameter to control LLM caching
+            parser.add_argument(
+                "--no-cache",
+                action="store_true",
+                help="Disable LLM response caching (default: caching enabled)",
+            )
+            # Add max_abstraction_num parameter to control the number of abstractions
+            parser.add_argument(
+                "--max-abstractions",
+                type=int,
+                default=config.get("max_abstractions", 10),
+                help="Maximum number of abstractions to identify (default: from config)",
+            )
+
+            args = parser.parse_args()
+
+            # Handle help display
+            if args.help:
+                print_enhanced_help()
+                sys.exit(0)
+
+            # Call shared function with categorized repo_url/local_dir
+            _run_documentation_generation(repo_url, local_dir, args, config)
+        finally:
+            # Always restore original sys.argv
+            sys.argv = original_argv
         return
 
     # Check if config exists, if not, prompt user to run init
@@ -126,7 +383,7 @@ def main():
     parser.add_argument(
         "--language",
         default=config.get("language", "english"),
-        help="Language for the generated tutorial (default: from config)",
+        help="Language for the generated wiki (default: from config)",
     )
     # Add use_cache parameter to control LLM caching
     parser.add_argument(
@@ -155,110 +412,8 @@ def main():
         print("Use --help for more information.")
         sys.exit(1)
 
-    # Get GitHub token from argument, config, or environment variable
-    github_token = None
-    if args.repo:
-        github_token = (
-            args.token or config.get("github_token") or sys.environ.get("GITHUB_TOKEN")
-        )
-        if not github_token:
-            print(
-                "⚠ Warning: No GitHub token provided.\n"
-                "  • For public repos: Optional, but you may hit rate limits (60 requests/hour)\n"
-                "  • For private repos: Required for access\n"
-                f"  • To add a token: Run '{CLI_ENTRY_POINT} config update-github-token'"
-            )
-
-    # Merge config with CLI args (CLI takes precedence)
-    final_config = merge_config_with_args(config, args)
-
-    # Initialize the shared dictionary with inputs
-    shared = {
-        "repo_url": args.repo,
-        "local_dir": args.dir,
-        "project_name": args.name,  # Can be None, FetchRepo will derive it
-        "github_token": github_token,
-        "output_dir": final_config[
-            "output_dir"
-        ],  # Base directory for CombineTutorial output
-        # Add include/exclude patterns and max file size
-        "include_patterns": (
-            set(final_config["include_patterns"])
-            if final_config.get("include_patterns")
-            else DEFAULT_INCLUDE_PATTERNS
-        ),
-        "exclude_patterns": (
-            set(final_config["exclude_patterns"])
-            if final_config.get("exclude_patterns")
-            else DEFAULT_EXCLUDE_PATTERNS
-        ),
-        "max_file_size": final_config["max_file_size"],
-        # Add language for multi-language support
-        "language": final_config["language"],
-        # Add use_cache flag (inverse of no-cache flag)
-        "use_cache": final_config["use_cache"],
-        # Add max_abstraction_num parameter
-        "max_abstraction_num": final_config["max_abstractions"],
-        # Outputs will be populated by the nodes
-        "files": [],
-        "abstractions": [],
-        "relationships": {},
-        "component_order": [],
-        "components": [],
-        "final_output_dir": None,
-    }
-
-    # Display logo and starting message with repository/directory and language
-    print_logo()
-    print()  # Blank line for spacing
-    print_header()  # Version will be read from pyproject.toml
-    print_info("Repository", args.repo or args.dir)
-    print_info("Language", final_config["language"].capitalize())
-    print_info("LLM caching", "Enabled" if final_config["use_cache"] else "Disabled")
-
-    # Create the flow instance
-    tutorial_flow = create_tutorial_flow()
-
-    # Run the flow
-    start_time = time.time()
-    try:
-        tutorial_flow.run(shared)
-        total_time = time.time() - start_time
-
-        # Print final success message
-        print_final_success(
-            "Success! Documents generated", total_time, shared["final_output_dir"]
-        )
-
-        # Check for updates (non-blocking, only if 24 hours have passed)
-        _check_for_updates_quietly()
-    except ValueError as e:
-        # Handle missing/invalid API key
-        if "GEMINI_API_KEY not found" in str(e):
-            print_error_missing_api_key()
-        else:
-            print_error_general(e)
-        sys.exit(1)
-    except (ValueError, IOError, OSError, ConnectionError, TimeoutError) as e:
-        # Check error type and show appropriate message
-        error_str = str(e).lower()
-        if (
-            "401" in error_str
-            or "unauthorized" in error_str
-            or "invalid api key" in error_str
-        ):
-            print_error_invalid_api_key()
-        elif "rate limit" in error_str or "429" in error_str:
-            print_error_rate_limit()
-        elif (
-            "connection" in error_str
-            or "timeout" in error_str
-            or "network" in error_str
-        ):
-            print_error_network()
-        else:
-            print_error_general(e)
-        sys.exit(1)
+    # Call shared function with args.repo/args.dir
+    _run_documentation_generation(args.repo, args.dir, args, config)
 
 
 def _check_for_updates_quietly():

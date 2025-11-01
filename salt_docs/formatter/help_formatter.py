@@ -68,7 +68,10 @@ def _print_usage_section():
         f"{HelpColors.LIGHT_GRAY}┌─ {HelpColors.WHITE}{HelpIcons.USAGE} USAGE{HelpColors.RESET}"
     )
     print(
-        f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}{CLI_ENTRY_POINT} [-h] (--repo REPO | --dir DIR) [OPTIONS...]{HelpColors.RESET}"
+        f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}{CLI_ENTRY_POINT} [-h] run [url|path] [OPTIONS...]{HelpColors.RESET}"
+    )
+    print(
+        f"{HelpColors.LIGHT_GRAY}└─ {HelpColors.MEDIUM_GRAY}{CLI_ENTRY_POINT} [-h] (--repo URL | --dir PATH) [OPTIONS...]{HelpColors.RESET}"
     )
     print()
 
@@ -76,13 +79,25 @@ def _print_usage_section():
 def _print_source_section():
     """Print source options section."""
     print(
-        f"{HelpColors.LIGHT_GRAY}┌─ {HelpColors.WHITE}{HelpIcons.SOURCE} SOURCE (Choose One){HelpColors.RESET}"
+        f"{HelpColors.LIGHT_GRAY}┌─ {HelpColors.WHITE}{HelpIcons.SOURCE} SOURCE{HelpColors.RESET}"
     )
     print(
-        f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}--repo REPO{HelpColors.DARK_GRAY}           {HelpIcons.INFO} URL of the public GitHub repository{HelpColors.RESET}"
+        f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}{CLI_ENTRY_POINT} run [url|path]{HelpColors.DARK_GRAY}    {HelpIcons.INFO} Generate documentation (auto-detects URL or path){HelpColors.RESET}"
     )
     print(
-        f"{HelpColors.LIGHT_GRAY}└─ {HelpColors.MEDIUM_GRAY}--dir DIR{HelpColors.DARK_GRAY}             {HelpIcons.INFO} Path to local directory{HelpColors.RESET}"
+        f"{HelpColors.LIGHT_GRAY}│  {HelpColors.DARK_GRAY}                            {HelpIcons.INFO} url: GitHub repository URL (e.g., https://github.com/user/repo){HelpColors.RESET}"
+    )
+    print(
+        f"{HelpColors.LIGHT_GRAY}│  {HelpColors.DARK_GRAY}                            {HelpIcons.INFO} path: Local directory path (e.g., /path/to/project){HelpColors.RESET}"
+    )
+    print(
+        f"{HelpColors.LIGHT_GRAY}│  {HelpColors.DARK_GRAY}                            {HelpIcons.INFO} (no argument): Current directory{HelpColors.RESET}"
+    )
+    print(
+        f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}--repo URL{HelpColors.DARK_GRAY}                  {HelpIcons.INFO} GitHub repository URL (legacy option){HelpColors.RESET}"
+    )
+    print(
+        f"{HelpColors.LIGHT_GRAY}└─ {HelpColors.MEDIUM_GRAY}--dir PATH{HelpColors.DARK_GRAY}                   {HelpIcons.INFO} Local directory path (legacy option){HelpColors.RESET}"
     )
     print()
 
@@ -109,7 +124,7 @@ def _print_options_section():
         ("-s, --max-size SIZE", "Maximum file size in bytes (default: from config)"),
         (
             "--language LANG",
-            "Language for the generated tutorial (default: from config)",
+            "Language for the generated wiki (default: from config)",
         ),
         ("--no-cache", "Disable LLM response caching (default: caching enabled)"),
         (
@@ -122,7 +137,7 @@ def _print_options_section():
         is_last = i == len(options) - 1
         prefix = f"{HelpColors.LIGHT_GRAY}{'└─' if is_last else '├─'}{HelpColors.RESET}"
         print(
-            f"{prefix} {HelpColors.MEDIUM_GRAY}{option:<20}{HelpColors.DARK_GRAY} {HelpIcons.INFO} {description}{HelpColors.RESET}"
+            f"{prefix} {HelpColors.MEDIUM_GRAY}{option:<25}{HelpColors.DARK_GRAY} {HelpIcons.INFO} {description}{HelpColors.RESET}"
         )
 
     print()
@@ -132,6 +147,9 @@ def _print_subcommands_section():
     """Print subcommands section."""
     print(
         f"{HelpColors.LIGHT_GRAY}┌─ {HelpColors.WHITE}{HelpIcons.SUBCOMMANDS} SUBCOMMANDS{HelpColors.RESET}"
+    )
+    print(
+        f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}run [url|path]{HelpColors.DARK_GRAY}        {HelpIcons.INFO} Generate documentation (auto-detects URL or path){HelpColors.RESET}"
     )
     print(
         f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}init{HelpColors.DARK_GRAY}                  {HelpIcons.INFO} Set up configuration{HelpColors.RESET}"
@@ -149,10 +167,12 @@ def _print_examples_section():
     )
 
     examples = [
+        f"{CLI_ENTRY_POINT} run                                    {HelpIcons.INFO}  Current directory",
+        f"{CLI_ENTRY_POINT} run https://github.com/user/repo       {HelpIcons.INFO}  GitHub repo",
+        f"{CLI_ENTRY_POINT} run /path/to/project                   {HelpIcons.INFO}  Local directory",
         f"{CLI_ENTRY_POINT} init",
         f"{CLI_ENTRY_POINT} config show",
         f'{CLI_ENTRY_POINT} config update-gemini-key "your-key"',
-        f"{CLI_ENTRY_POINT} --repo https://github.com/user/repo",
     ]
 
     for i, example in enumerate(examples):

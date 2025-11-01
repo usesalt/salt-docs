@@ -259,11 +259,13 @@ def merge_config_with_args(config: Dict[str, Any], args) -> Dict[str, Any]:
     for arg_name, config_key in arg_mapping.items():
         if hasattr(args, arg_name):
             value = getattr(args, arg_name)
-            if value is not None:
-                if arg_name == "no_cache":
-                    # Invert the logic: no_cache=True means use_cache=False
-                    merged[config_key] = not value
-                elif arg_name in ["include", "exclude"]:
+            if arg_name == "no_cache":
+                # For store_true flags, only override if explicitly provided (True)
+                # Invert the logic: no_cache=True means use_cache=False
+                if value is True:
+                    merged[config_key] = False
+            elif value is not None:
+                if arg_name in ["include", "exclude"]:
                     # Convert to list if it's a set
                     if isinstance(value, set):
                         merged[config_key] = list(value)
