@@ -47,27 +47,21 @@ Run the setup wizard to configure your API keys and preferences:
 salt-docs init
 ```
 
-This will:
-- Prompt for your Gemini API key
-- Optionally ask for GitHub token (for private repos)
-- Set default output location (`~/Documents/Salt Docs`)
-- Configure other preferences
-
 ### 2. Generate Documentation
 
 #### Analyze GitHub repository
 ```bash
-salt-docs --repo https://github.com/username/repo
+salt-docs run https://github.com/username/repo
 ```
 
 #### Analyze local directory
 ```bash
-salt-docs --dir /path/to/your/codebase
+salt-docs run /path/to/your/codebase
 ```
 
 #### With custom options
 ```bash
-salt-docs --repo https://github.com/username/repo --output /custom/path --language spanish --max-abstractions 10
+salt-docs run https://github.com/username/repo --output /custom/path --language spanish --max-abstractions 10
 ```
 
 ## Configuration
@@ -78,6 +72,8 @@ Salt Docs stores configuration in a per-user config file and uses your system's 
 - Windows: `%APPDATA%\saltdocs\config.json`
 
 ### Configuration Options
+- `llm_provider`: LLM provider to use (gemini, openai, anthropic, openrouter, ollama) - default: gemini
+- `llm_model`: Model name to use (e.g., "gemini-2.5-flash", "gpt-4o-mini", "claude-3-5-sonnet-20241022") - default: gemini-2.5-flash
 - `output_dir`: Default output directory
 - `language`: Default language for generated docs
 - `max_abstractions`: Default number of abstractions to identify
@@ -85,6 +81,7 @@ Salt Docs stores configuration in a per-user config file and uses your system's 
 - `use_cache`: Enable/disable LLM response caching
 - `include_patterns`: Default file patterns to include
 - `exclude_patterns`: Default file patterns to exclude
+- `ollama_base_url`: Custom Ollama base URL (optional, default: http://localhost:11434)
 
 ### Managing Configuration
 
@@ -95,11 +92,14 @@ salt-docs config show
 
 #### Update API Keys
 ```bash
-# Update Gemini API key (interactive)
-salt-docs config update-gemini-key
+# Update API key for any provider (interactive)
+salt-docs config update-api-key gemini
+salt-docs config update-api-key openai
+salt-docs config update-api-key anthropic
+salt-docs config update-api-key openrouter
 
-# Update Gemini API key directly
-salt-docs config update-gemini-key "your-api-key-here"
+# Legacy command (still works, redirects to update-api-key)
+salt-docs config update-gemini-key
 
 # Update GitHub token (interactive)
 salt-docs config update-github-token
@@ -110,6 +110,12 @@ salt-docs config update-github-token "your-token-here"
 
 #### Update Other Settings
 ```bash
+# Change LLM provider
+salt-docs config set llm-provider openai
+
+# Change LLM model
+salt-docs config set llm-model gpt-4o-mini
+
 # Change default language
 salt-docs config set language spanish
 
@@ -201,10 +207,57 @@ salt-docs mcp
 
 This will start the server in stdio mode (for MCP clients). To test locally, you can use the test scripts in the `tests/` directory.
 
+## LLM Provider Support
+
+Salt Docs supports multiple LLM providers, allowing you to choose the best option for your needs:
+
+### Supported Providers
+
+1. **Google Gemini** (default)
+   - Recommended models: gemini-2.5-pro, gemini-2.5-flash, gemini-1.5-pro, gemini-1.5-flash
+   - API key required: Yes (GEMINI_API_KEY)
+
+2. **OpenAI**
+   - Recommended models: gpt-4o-mini, gpt-4.1-mini, gpt-5-mini, gpt-5-nano
+   - API key required: Yes (OPENAI_API_KEY)
+   - Supports o1 models with reasoning capabilities
+
+3. **Anthropic Claude**
+   - Recommended models: claude-3-5-sonnet, claude-3-5-haiku, claude-3-7-sonnet (with extended thinking), claude-3-opus
+   - API key required: Yes (ANTHROPIC_API_KEY)
+
+4. **OpenRouter**
+   - Recommended models: google/gemini-2.5-flash:free, meta-llama/llama-3.1-8b-instruct:free, openai/gpt-4o-mini, anthropic/claude-3.5-sonnet
+   - API key required: Yes (OPENROUTER_API_KEY)
+   - Access multiple models through a single API
+
+5. **Ollama (Local)**
+   - Recommended models: llama3.2, llama3.1, mistral, codellama, phi3
+   - API key required: No (runs locally)
+   - Default URL: http://localhost:11434
+   - Perfect for privacy-sensitive projects or offline usage
+
+### Switching Providers
+
+You can switch between providers at any time:
+
+```bash
+# Switch to OpenAI
+salt-docs config set llm-provider openai
+salt-docs config set llm-model gpt-4o-mini
+salt-docs config update-api-key openai
+
+# Switch to Ollama (local)
+salt-docs config set llm-provider ollama
+salt-docs config set llm-model llama3.2
+# No API key needed for Ollama!
+```
+
 ## CLI Options
 
 ### Required
-- `--repo` or `--dir` - GitHub repo URL or local directory path
+- `run` - GitHub repo URL, current open directory or local directory path
+- `--repo` or `--dir` - GitHub repo URL or local directory path (depricated)
 
 ### Optional
 - `-n, --name` - Project name (derived from repo/directory if omitted)

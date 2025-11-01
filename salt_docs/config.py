@@ -91,13 +91,22 @@ def _migrate_legacy_config_if_needed() -> None:
 
 def init_config() -> None:
     """Interactive setup wizard for init command."""
+    import getpass
+
     from .formatter.init_formatter import (
         print_init_header,
         print_section_start,
         print_input_prompt,
         print_init_complete,
     )
-    from .formatter.output_formatter import Icons
+    from .formatter.output_formatter import Colors, Icons, Tree
+    from .utils.llm_providers import (
+        get_provider_list,
+        get_display_name,
+        get_recommended_models,
+        get_provider_info,
+        requires_api_key,
+    )
 
     # Create directories
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -105,15 +114,113 @@ def init_config() -> None:
 
     print_init_header()
 
+    # LLM Provider Selection section
+    print_section_start("LLM Provider", Icons.INFO)
+
+    # Show provider list
+    providers = get_provider_list()
+    print(
+        f"{Colors.LIGHT_GRAY}{Tree.VERTICAL}  {Colors.LIGHT_GRAY}{Tree.MIDDLE} "
+        f"{Colors.MEDIUM_GRAY}Available providers:{Colors.RESET}"
+    )
+    for i, provider_id in enumerate(providers, 1):
+        display_name = get_display_name(provider_id)
+        print(
+            f"{Colors.LIGHT_GRAY}{Tree.VERTICAL}  {Colors.LIGHT_GRAY}{Tree.VERTICAL}  "
+            f"{Colors.MEDIUM_GRAY}{i}) {display_name}{Colors.RESET}"
+        )
+
+    # Provider selection
+    print_input_prompt(
+        "Select LLM provider (enter number)", Icons.ANALYZING, is_required=True
+    )
+    provider_choice = input().strip()
+
+    try:
+        provider_index = int(provider_choice) - 1
+        if provider_index < 0 or provider_index >= len(providers):
+            print(f"✘ Invalid provider selection: {provider_choice}")
+            sys.exit(1)
+        llm_provider = providers[provider_index]
+    except ValueError:
+        print(f"✘ Invalid provider selection: {provider_choice}")
+        sys.exit(1)
+
+    provider_info = get_provider_info(llm_provider)
+    provider_display = get_display_name(llm_provider)
+
+    # Model Selection
+    print_section_start("Model Selection", Icons.INFO)
+
+    # Show recommended models
+    recommended_models = get_recommended_models(llm_provider)
+    print(
+        f"{Colors.LIGHT_GRAY}{Tree.VERTICAL}  {Colors.LIGHT_GRAY}{Tree.MIDDLE} "
+        f"{Colors.MEDIUM_GRAY}Recommended models for {provider_display}:{Colors.RESET}"
+    )
+    for i, model in enumerate(recommended_models, 1):
+        print(
+            f"{Colors.LIGHT_GRAY}{Tree.VERTICAL}  {Colors.LIGHT_GRAY}{Tree.VERTICAL}  "
+            f"{Colors.MEDIUM_GRAY}{i}) {model}{Colors.RESET}"
+        )
+    print(
+        f"{Colors.LIGHT_GRAY}{Tree.VERTICAL}  {Colors.LIGHT_GRAY}{Tree.VERTICAL}  "
+        f"{Colors.MEDIUM_GRAY}{len(recommended_models) + 1}) Enter custom model name{Colors.RESET}"
+    )
+
+    print_input_prompt(
+        f"Select model for {provider_display} (enter number or custom name)",
+        Icons.ANALYZING,
+        is_required=True,
+    )
+    model_choice = input().strip()
+
+    # Parse model selection
+    try:
+        model_index = int(model_choice) - 1
+        if model_index == len(recommended_models):
+            # Custom model
+            print_input_prompt(
+                "Enter custom model name", Icons.CONFIG, is_required=True
+            )
+            llm_model = input().strip()
+            if not llm_model:
+                print("✘ Model name cannot be empty!")
+                sys.exit(1)
+        elif 0 <= model_index < len(recommended_models):
+            llm_model = recommended_models[model_index]
+        else:
+            print(f"✘ Invalid model selection: {model_choice}")
+            sys.exit(1)
+    except ValueError:
+        # Custom model name entered directly
+        llm_model = model_choice
+
     # API Keys section
     print_section_start("API Keys", Icons.INFO)
 
-    # Gemini API Key
-    print_input_prompt("Gemini API Key", Icons.ANALYZING, is_required=True)
-    gemini_key = input().strip()
-    if not gemini_key:
-        print("✘ Gemini API key is required!")
-        sys.exit(1)
+    # Get API key if required
+    api_key = None
+    custom_url = None
+    if requires_api_key(llm_provider):
+        env_var = provider_info.get("api_key_env")
+        key_name = env_var or f"{provider_display} API Key"
+
+        print_input_prompt(key_name, Icons.ANALYZING, is_required=True)
+        api_key = getpass.getpass().strip()
+        if not api_key:
+            print(f"✘ {key_name} is required!")
+            sys.exit(1)
+    else:
+        # Ollama - just show base URL
+        base_url = provider_info.get("base_url", "http://localhost:11434")
+        print_input_prompt(
+            "Ollama Base URL", Icons.CONFIG, is_required=False, default_value=base_url
+        )
+        custom_url = input().strip()
+        # For Ollama, use default if empty
+        if not custom_url:
+            custom_url = base_url
 
     # GitHub Token
     print_input_prompt(
@@ -125,7 +232,8 @@ def init_config() -> None:
     keyring_available = KEYRING_AVAILABLE
     if keyring_available:
         try:
-            keyring.set_password("salt-docs", "gemini_api_key", gemini_key)
+            if api_key:
+                keyring.set_password("salt-docs", provider_info["keyring_key"], api_key)
             if github_token:
                 keyring.set_password("salt-docs", "github_token", github_token)
         except (OSError, RuntimeError, AttributeError):
@@ -168,6 +276,8 @@ def init_config() -> None:
 
     # Build configuration
     config = {
+        "llm_provider": llm_provider,
+        "llm_model": llm_model,
         "output_dir": output_dir,
         "language": language,
         "max_abstractions": max_abstractions,
@@ -177,9 +287,14 @@ def init_config() -> None:
         "exclude_patterns": DEFAULT_CONFIG["exclude_patterns"],
     }
 
+    # Store Ollama base URL if custom
+    if llm_provider == "ollama" and custom_url and custom_url != base_url:
+        config["ollama_base_url"] = custom_url
+
     # Add API keys to config if keyring not available
     if not keyring_available:
-        config["gemini_api_key"] = gemini_key
+        if api_key:
+            config[provider_info["keyring_key"]] = api_key
         if github_token:
             config["github_token"] = github_token
 
@@ -207,11 +322,17 @@ def load_config() -> Dict[str, Any]:
             print(f"⚠ Warning: Could not load config file: {e}")
 
     # Load API keys from keyring if available
+    # Load all provider API keys dynamically
     if KEYRING_AVAILABLE:
         try:
-            gemini_key = keyring.get_password("salt-docs", "gemini_api_key")
-            if gemini_key:
-                config["gemini_api_key"] = gemini_key
+            from .utils.llm_providers import LLM_PROVIDERS
+
+            for provider_id, provider_info in LLM_PROVIDERS.items():
+                keyring_key = provider_info.get("keyring_key")
+                if keyring_key:
+                    api_key = keyring.get_password("salt-docs", keyring_key)
+                    if api_key:
+                        config[keyring_key] = api_key
 
             github_token = keyring.get_password("salt-docs", "github_token")
             if github_token:
@@ -229,7 +350,13 @@ def save_config(config: Dict[str, Any]) -> None:
     # Don't save API keys to file if keyring is available
     config_to_save = config.copy()
     if KEYRING_AVAILABLE:
-        config_to_save.pop("gemini_api_key", None)
+        # Remove all provider API keys from config file
+        from .utils.llm_providers import LLM_PROVIDERS
+
+        for provider_info in LLM_PROVIDERS.values():
+            keyring_key = provider_info.get("keyring_key")
+            if keyring_key:
+                config_to_save.pop(keyring_key, None)
         config_to_save.pop("github_token", None)
 
     try:
@@ -282,10 +409,50 @@ def check_config_exists() -> bool:
     return CONFIG_FILE.exists()
 
 
-def get_api_key() -> Optional[str]:
-    """Get API key from config or environment."""
+def get_llm_provider() -> str:
+    """Get LLM provider from config, defaulting to gemini."""
     config = load_config()
-    return config.get("gemini_api_key") or os.getenv("GEMINI_API_KEY")
+    return config.get("llm_provider", "gemini")
+
+
+def get_llm_model() -> str:
+    """Get LLM model from config, defaulting to gemini-2.5-flash."""
+    config = load_config()
+    return config.get("llm_model", "gemini-2.5-flash")
+
+
+def get_api_key() -> Optional[str]:
+    """Get API key from config or environment based on current provider."""
+    from .utils.llm_providers import get_provider_info, requires_api_key
+
+    config = load_config()
+    provider = get_llm_provider()
+
+    # Check if provider requires API key
+    if not requires_api_key(provider):
+        return None
+
+    provider_info = get_provider_info(provider)
+    keyring_key = provider_info.get("keyring_key")
+    env_var = provider_info.get("api_key_env")
+
+    # Try keyring first, then env var
+    api_key = None
+    if keyring_key and KEYRING_AVAILABLE:
+        try:
+            api_key = keyring.get_password("salt-docs", keyring_key)
+        except (OSError, RuntimeError, AttributeError):
+            pass
+
+    if not api_key:
+        # Try config file fallback
+        api_key = config.get(keyring_key or "")
+
+    if not api_key and env_var:
+        # Fallback to environment variable
+        api_key = os.getenv(env_var)
+
+    return api_key
 
 
 def get_github_token() -> Optional[str]:

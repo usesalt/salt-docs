@@ -132,8 +132,20 @@ def _run_documentation_generation(repo_url, local_dir, args, config):
         _check_for_updates_quietly()
     except ValueError as e:
         # Handle missing/invalid API key
-        if "GEMINI_API_KEY not found" in str(e):
-            print_error_missing_api_key()
+        # Check for missing API key errors (provider-agnostic)
+        error_str = str(e).lower()
+        if "not found" in error_str and (
+            "api key" in error_str or "api_key" in error_str
+        ):
+            from .config import get_llm_provider
+            from .utils.llm_providers import get_display_name
+
+            try:
+                provider = get_llm_provider()
+                provider_display = get_display_name(provider)
+                print_error_missing_api_key(provider_display)
+            except Exception:
+                print_error_missing_api_key()
         else:
             print_error_general(e)
         sys.exit(1)
@@ -448,14 +460,18 @@ def handle_config_command():
     if len(sys.argv) < 3:
         print("Usage: salt-docs config <command>")
         print("Commands:")
-        print("  show                    - Show current configuration")
-        print("  set <key> <value>       - Set a configuration value")
+        print("  show                        - Show current configuration")
+        print("  set <key> <value>           - Set a configuration value")
         print(
-            "  update-gemini-key [key] - Update Gemini API key (interactive if no key provided)"
+            "  update-api-key <provider>    - Update API key for a provider (interactive)"
         )
         print(
-            "  update-github-token [token] - Update GitHub token (interactive if no token provided)"
+            "  update-github-token [token]  - Update GitHub token (interactive if no token provided)"
         )
+        print("\nExamples:")
+        print("  salt-docs config set llm-provider openai")
+        print("  salt-docs config set llm-model gpt-4o-mini")
+        print("  salt-docs config update-api-key gemini")
         return
 
     command = sys.argv[2]
@@ -466,18 +482,21 @@ def handle_config_command():
         if len(sys.argv) < 5:
             print("Usage: salt-docs config set <key> <value>")
             print("Example: salt-docs config set language spanish")
+            print("Example: salt-docs config set llm-provider openai")
             return
         key = sys.argv[3]
         value = sys.argv[4]
         set_config_value(key, value)
+    elif command == "update-api-key":
+        if len(sys.argv) < 4:
+            print("Usage: salt-docs config update-api-key <provider>")
+            print("Providers: gemini, openai, anthropic, openrouter")
+            return
+        provider = sys.argv[3]
+        update_api_key(provider)
     elif command == "update-gemini-key":
-        if len(sys.argv) > 3:
-            # Key provided as argument
-            new_key = sys.argv[3]
-            update_gemini_key_direct(new_key)
-        else:
-            # Interactive mode
-            update_gemini_key()
+        # Legacy command, redirect to update-api-key
+        update_api_key("gemini")
     elif command == "update-github-token":
         if len(sys.argv) > 3:
             # Token provided as argument
@@ -499,6 +518,8 @@ def show_config():
 
     config = load_config()
     print(" Current Salt Docs Configuration:")
+    print(f"  LLM Provider: {config.get('llm_provider', 'Not set')}")
+    print(f"  LLM Model: {config.get('llm_model', 'Not set')}")
     print(f"  Output Directory: {config.get('output_dir', 'Not set')}")
     print(f"  Language: {config.get('language', 'Not set')}")
     print(f"  Max Abstractions: {config.get('max_abstractions', 'Not set')}")
@@ -507,15 +528,18 @@ def show_config():
 
     # Check if API keys are available
     try:
-        from .config import get_api_key, get_github_token
+        from .config import get_api_key, get_github_token, get_llm_provider
+        from .utils.llm_providers import get_display_name
 
-        gemini_key = get_api_key()
+        provider = get_llm_provider()
+        provider_display = get_display_name(provider)
+        api_key = get_api_key()
         github_token = get_github_token()
-        print(f"  Gemini API Key: {'✓ Set' if gemini_key else '✘ Not set'}")
+        print(f"  {provider_display} API Key: {'✓ Set' if api_key else '✘ Not set'}")
         print(f"  GitHub Token: {'✓ Set' if github_token else '✘ Not set'}")
     except (IOError, OSError, ValueError, ImportError) as e:
-        print(f"  Gemini API Key:  Unable to check ({e})")
-        print(f"  GitHub Token:  Unable to check ({e})")
+        print(f"  API Key: Unable to check ({e})")
+        print(f"  GitHub Token: Unable to check ({e})")
 
 
 def set_config_value(key, value):
@@ -526,19 +550,35 @@ def set_config_value(key, value):
 
     config = load_config()
 
+    # Map CLI keys to config keys
+    key_mapping = {
+        "llm-provider": "llm_provider",
+        "llm-model": "llm_model",
+    }
+    config_key = key_mapping.get(key, key)
+
+    # Validate provider/model if setting those
+    if config_key == "llm_provider":
+        from .utils.llm_providers import get_provider_list
+
+        if value not in get_provider_list():
+            print(f"✘ Invalid provider: {value}")
+            print(f"Available providers: {', '.join(get_provider_list())}")
+            return
+
     # Handle different value types
-    if key in ["max_abstractions", "max_file_size"]:
+    if config_key in ["max_abstractions", "max_file_size"]:
         try:
             value = int(value)
         except ValueError:
             print(f"✘ {key} must be a number")
             return
-    elif key == "use_cache":
+    elif config_key == "use_cache":
         value = value.lower() in ["true", "1", "yes", "on"]
-    elif key in ["include_patterns", "exclude_patterns"]:
+    elif config_key in ["include_patterns", "exclude_patterns"]:
         value = [pattern.strip() for pattern in value.split(",")]
 
-    config[key] = value
+    config[config_key] = value
     save_config(config)
     print(f"✓ Updated {key} to {value}")
 
@@ -597,22 +637,47 @@ def _update_secret(
         print(f"✘ {display_name} cannot be empty")
 
 
-def update_gemini_key():
-    """Update Gemini API key (interactive)."""
+def update_api_key(provider: str):
+    """Update API key for a provider (interactive)."""
     import getpass
 
-    print("+ Update Gemini API Key")
-    new_key = getpass.getpass("Enter new Gemini API key: ").strip()
+    from .utils.llm_providers import (
+        get_provider_info,
+        get_display_name,
+        requires_api_key,
+    )
 
-    if not new_key:
-        print("✘ API key cannot be empty")
-        return
+    try:
+        provider_info = get_provider_info(provider)
+        provider_display = get_display_name(provider)
 
-    update_gemini_key_direct(new_key)
+        if not requires_api_key(provider):
+            print(f"✘ {provider_display} does not require an API key")
+            return
+
+        keyring_key = provider_info.get("keyring_key")
+        key_name = f"{provider_display} API Key"
+
+        print(f"+ Update {key_name}")
+        new_key = getpass.getpass(f"Enter new {key_name}: ").strip()
+
+        if not new_key:
+            print("✘ API key cannot be empty")
+            return
+
+        _update_secret(keyring_key, new_key, key_name, allow_empty=False)
+    except ValueError as e:
+        print(f"✘ {e}")
+        print("Available providers: gemini, openai, anthropic, openrouter")
+
+
+def update_gemini_key():
+    """Update Gemini API key (interactive). Legacy function."""
+    update_api_key("gemini")
 
 
 def update_gemini_key_direct(new_key: str) -> None:
-    """Update Gemini API key directly."""
+    """Update Gemini API key directly. Legacy function."""
     if not new_key:
         print("✘ API key cannot be empty")
         return

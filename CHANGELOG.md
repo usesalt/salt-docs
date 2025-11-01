@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2025-01-29
+
+### Added
+- **Multi-Provider LLM Support** - Support for multiple LLM providers beyond Gemini
+  - **OpenAI** - Support for GPT models (gpt-4o-mini, o1-mini, o1-preview, etc.)
+  - **Anthropic Claude** - Support for Claude models (claude-3-5-sonnet, claude-3-7-sonnet with extended thinking, etc.)
+  - **OpenRouter** - Support for accessing multiple models via OpenRouter API
+  - **Ollama (Local)** - Support for running local LLMs via Ollama (no API key required)
+- **Enhanced Initialization Flow** - Interactive provider and model selection during setup
+  - Numbered provider selection (Gemini, OpenAI, Anthropic, OpenRouter, Ollama)
+  - Recommended model suggestions for each provider
+  - Custom model name entry option
+- **Provider-Specific API Key Management** - Secure storage of API keys per provider in keyring
+- **New Configuration Fields**:
+  - `llm_provider` - Selected LLM provider (default: gemini)
+  - `llm_model` - Selected model name (default: gemini-2.5-flash)
+  - `ollama_base_url` - Custom Ollama base URL (optional, default: http://localhost:11434)
+
+### Changed
+- Initialization flow now includes provider and model selection before API key setup
+- API key storage now uses provider-specific keyring keys (e.g., `gemini_api_key`, `openai_api_key`)
+- `get_api_key()` now retrieves API key based on configured provider
+- Updated config commands:
+  - `config set llm-provider <provider>` - Set LLM provider
+  - `config set llm-model <model>` - Set LLM model
+  - `config update-api-key <provider>` - Update API key for specific provider (replaces `update-gemini-key`)
+- Error messages are now provider-agnostic
+
+### Improved
+- Backward compatibility: Existing configs default to Gemini if `llm_provider`/`llm_model` not set
+- Environment variable fallback still supported for all providers
+- Ollama support for local LLM usage without API keys
+- Provider-specific model recommendations for cost-effective options
+
 ## [0.1.8] - 2025-01-28
 
 ### Changed

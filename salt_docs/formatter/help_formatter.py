@@ -70,9 +70,6 @@ def _print_usage_section():
     print(
         f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}{CLI_ENTRY_POINT} [-h] run [url|path] [OPTIONS...]{HelpColors.RESET}"
     )
-    print(
-        f"{HelpColors.LIGHT_GRAY}└─ {HelpColors.MEDIUM_GRAY}{CLI_ENTRY_POINT} [-h] (--repo URL | --dir PATH) [OPTIONS...]{HelpColors.RESET}"
-    )
     print()
 
 
@@ -92,12 +89,6 @@ def _print_source_section():
     )
     print(
         f"{HelpColors.LIGHT_GRAY}│  {HelpColors.DARK_GRAY}                            {HelpIcons.INFO} (no argument): Current directory{HelpColors.RESET}"
-    )
-    print(
-        f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}--repo URL{HelpColors.DARK_GRAY}                  {HelpIcons.INFO} GitHub repository URL (legacy option){HelpColors.RESET}"
-    )
-    print(
-        f"{HelpColors.LIGHT_GRAY}└─ {HelpColors.MEDIUM_GRAY}--dir PATH{HelpColors.DARK_GRAY}                   {HelpIcons.INFO} Local directory path (legacy option){HelpColors.RESET}"
     )
     print()
 

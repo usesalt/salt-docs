@@ -66,4 +66,6 @@ DEFAULT_CONFIG = {
     "include_patterns": list(DEFAULT_INCLUDE_PATTERNS),
     "exclude_patterns": list(DEFAULT_EXCLUDE_PATTERNS),
     "last_update_check": None,  # Timestamp of last update check (None means never checked)
+    "llm_provider": "gemini",
+    "llm_model": "gemini-2.5-flash",
 }

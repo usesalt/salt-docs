@@ -204,16 +204,20 @@ def print_final_success(message, total_time, output_path):
     print(f"{Colors.MEDIUM_GRAY}📂 {Colors.WHITE}{output_path}{Colors.RESET}")
 
 
-def print_error_missing_api_key():
+def print_error_missing_api_key(provider_display: str = "API"):
     """Print error message for missing API key."""
     from ..metadata import CLI_ENTRY_POINT
 
     print()
-    print(f"{Colors.WHITE}{Icons.ERROR} Error: Gemini API key not found{Colors.RESET}")
-    print(f"{Colors.MEDIUM_GRAY}  To configure your API key, run:{Colors.RESET}")
-    print(f"{Colors.WHITE}    {CLI_ENTRY_POINT} config update-gemini-key{Colors.RESET}")
     print(
-        f"{Colors.MEDIUM_GRAY}  Or set the GEMINI_API_KEY environment variable{Colors.RESET}"
+        f"{Colors.WHITE}{Icons.ERROR} Error: {provider_display} API key not found{Colors.RESET}"
+    )
+    print(f"{Colors.MEDIUM_GRAY}  To configure your API key, run:{Colors.RESET}")
+    print(
+        f"{Colors.WHITE}    {CLI_ENTRY_POINT} config update-api-key <provider>{Colors.RESET}"
+    )
+    print(
+        f"{Colors.MEDIUM_GRAY}  Or set the appropriate API key environment variable{Colors.RESET}"
     )
 
 
@@ -229,7 +233,9 @@ def print_error_invalid_api_key():
         f"{Colors.MEDIUM_GRAY}  Your API key may be invalid or expired.{Colors.RESET}"
     )
     print(f"{Colors.MEDIUM_GRAY}  To update your API key, run:{Colors.RESET}")
-    print(f"{Colors.WHITE}    {CLI_ENTRY_POINT} config update-gemini-key{Colors.RESET}")
+    print(
+        f"{Colors.WHITE}    {CLI_ENTRY_POINT} config update-api-key <provider>{Colors.RESET}"
+    )
 
 
 def print_error_rate_limit():
