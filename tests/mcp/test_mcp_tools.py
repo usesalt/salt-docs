@@ -24,32 +24,13 @@ def test_server_initialization():
         print("✓ Server initialized successfully")
         print("✓ Module loads without errors")
         print()
+        return True
     except Exception as e:
         print(f"✗ Error initializing server: {e}")
         import traceback
 
         traceback.print_exc()
         raise
-
-
-def test_list_docs():
-    """Test the list_docs tool."""
-    print("=" * 60)
-    print("Testing list_docs tool")
-    print("=" * 60)
-
-    from salt_docs.mcp.server import list_docs
-
-    result = list_docs()
-    print(result)
-
-    # Verify it's not empty or error message
-    assert (
-        "No documentation files found" in result
-        or "Available documentation files" in result
-    )
-    print("✓ list_docs tool works correctly")
-    print()
 
 
 def test_get_docs():
@@ -141,7 +122,7 @@ def test_search_docs():
     try:
         results = search_docs("README", limit=10)
         print(results[:500] if len(results) > 500 else results)
-        assert "Found" in results or "No files found" in results or "Indexed" in results
+        assert "Found" in results or "No files found" in results or "No chunks found" in results or "No chunks found" in results or "Indexed" in results
         print("✓ Basic search works")
     except Exception as e:
         print(f"✗ Basic search failed: {e}")
@@ -155,7 +136,7 @@ def test_search_docs():
     try:
         results = search_docs("readme", limit=5)
         print(f"Results length: {len(results)} characters")
-        assert "Found" in results or "No files found" in results
+        assert "Found" in results or "No files found" in results or "No chunks found" in results
         print("✓ Search with limit works")
     except Exception as e:
         print(f"✗ Search with limit failed: {e}")
@@ -167,7 +148,7 @@ def test_search_docs():
         try:
             results = search_docs("readme", limit=10, directory_filter=str(output_dir))
             print(f"Results length: {len(results)} characters")
-            assert "Found" in results or "No files found" in results
+            assert "Found" in results or "No files found" in results or "No chunks found" in results
             print("✓ Search with directory filter works")
         except Exception as e:
             print(f"✗ Search with directory filter failed: {e}")
@@ -288,18 +269,7 @@ def main():
         traceback.print_exc()
         sys.exit(1)
 
-    # Test 2: list_docs
-    try:
-        test_list_docs()
-        tests_passed += 1
-    except Exception as e:
-        tests_failed += 1
-        print(f"✗ list_docs test failed: {e}")
-        import traceback
-
-        traceback.print_exc()
-
-    # Test 3: get_docs
+    # Test 2: get_docs
     try:
         test_get_docs()
         tests_passed += 1
@@ -310,7 +280,7 @@ def main():
 
         traceback.print_exc()
 
-    # Test 4: search_docs
+    # Test 3: search_docs
     try:
         test_search_docs()
         tests_passed += 1
@@ -321,7 +291,7 @@ def main():
 
         traceback.print_exc()
 
-    # Test 5: index_directories
+    # Test 4: index_directories
     try:
         test_index_directories()
         tests_passed += 1

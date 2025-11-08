@@ -401,6 +401,7 @@ class FileIndexer:
                         word = word.replace('(', ' ').replace(')', ' ')
                         word = word.replace('[', ' ').replace(']', ' ')
                         word = word.replace('?', ' ')  # Remove question marks
+                        word = word.replace('-', ' ')  # Split hyphenated words
                         # Remove extra spaces
                         word = ' '.join(word.split())
                         return word

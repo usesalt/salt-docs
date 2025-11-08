@@ -15,7 +15,7 @@ app = FastMCP(
     "salt-docs",
     instructions=(
         "Expose local wiki markdown files as MCP tools. "
-        "Available tools: list_docs (list output_dir docs), search_docs (fast machine-wide search), "
+        "Available tools: search_docs (semantic search across indexed directories), "
         "get_docs (fetch content by resource name or file path), and index_directories (index dirs for search). "
         "Doc names mirror paths under your configured output_dir (without .md extension)."
     ),
@@ -50,17 +50,6 @@ def _get_project_resources():
 
 
 # MCP Tools - executable actions for interacting with documentation
-@app.tool()
-def list_docs() -> str:
-    """List all available documentation files with their IDs/names."""
-    projects = _get_project_resources()
-    if not projects:
-        return "No documentation files found in the output directory."
-
-    doc_list = "\n".join(f"- {name}" for name in sorted(projects.keys()))
-    return f"Available documentation files ({len(projects)} total):\n\n{doc_list}"
-
-
 @app.tool()
 def get_docs(identifier: str) -> str:
     """
@@ -117,27 +106,24 @@ def search_docs(
     query: str,
     limit: int = 20,
     directory_filter: Optional[str] = None,
-    use_semantic: bool = True,
     chunk_limit: int = 5,
 ) -> str:
     """
-    Search for markdown files across indexed directories using fast full-text search
-    or semantic search (when enabled).
+    Search for markdown files across indexed directories using semantic search.
 
-    This tool searches file paths, names, and resource names. When semantic search is
-    enabled, it returns relevant chunks instead of entire files. Index directories first
-    using the indexer, or files are auto-indexed from the configured output_dir.
+    This tool uses semantic search to find relevant chunks from indexed documentation.
+    It returns relevant chunks with content snippets instead of entire files.
+    Index directories first using index_directories, or files are auto-indexed from
+    the configured output_dir on first search.
 
     Args:
-        query: Search query (supports multi-word queries)
-        limit: Maximum number of results (default: 20)
+        query: Search query (supports multi-word queries and natural language)
+        limit: Maximum number of chunks to return (default: 20)
         directory_filter: Optional directory path to filter results
-        use_semantic: Use semantic search to return relevant chunks (default: True)
-        chunk_limit: Maximum chunks per file when using semantic search (default: 5)
+        chunk_limit: Maximum chunks per file (default: 5)
 
     Returns:
-        Formatted list of matching files/chunks with their paths and resource names.
-        When semantic search is enabled, returns relevant chunks with snippets.
+        Formatted list of relevant chunks with their paths, resource names, scores, and content snippets.
     """
     indexer = _get_indexer()
 
@@ -150,42 +136,14 @@ def search_docs(
             if added > 0 or updated > 0:
                 return f"Indexed {added} new files, updated {updated}. Try searching again."
 
-    # Use semantic search if enabled and available
-    if use_semantic and indexer.enable_semantic_search:
-        results = indexer.search_semantic(
-            query,
-            limit=limit,
-            directory_filter=directory_filter,
-            max_chunks_per_file=chunk_limit,
-        )
-
-        if not results:
-            return f"No chunks found matching '{query}'."
-
-        # Format chunk results
-        lines = [f"Found {len(results)} relevant chunk(s) matching '{query}':\n"]
-        for i, result in enumerate(results, 1):
-            # Truncate chunk content for display (first 200 chars)
-            content_snippet = result.get("content", "")[:200]
-            if len(result.get("content", "")) > 200:
-                content_snippet += "..."
-
-            lines.append(
-                f"{i}. {result['resource_name']} (chunk {result.get('chunk_index', 0)})\n"
-                f"   Path: {result['file_path']}\n"
-                f"   Score: {result.get('score', 0):.4f}\n"
-                f"   Content: {content_snippet}"
-            )
-
-        return "\n".join(lines)
-    else:
-        # Use keyword search (backward compatible)
+    # Always use semantic search
+    if not indexer.enable_semantic_search or not indexer.vector_index:
+        # Fallback to keyword search if semantic search is not available
         results = indexer.search(query, limit=limit, directory_filter=directory_filter)
-
         if not results:
             return f"No files found matching '{query}'."
-
-        # Format results
+        
+        # Format file results
         lines = [f"Found {len(results)} file(s) matching '{query}':\n"]
         for i, result in enumerate(results, 1):
             lines.append(
@@ -193,8 +151,35 @@ def search_docs(
                 f"   Path: {result['file_path']}\n"
                 f"   Directory: {result['directory']}"
             )
-
         return "\n".join(lines)
+
+    # Use semantic search
+    results = indexer.search_semantic(
+        query,
+        limit=limit,
+        directory_filter=directory_filter,
+        max_chunks_per_file=chunk_limit,
+    )
+
+    if not results:
+        return f"No chunks found matching '{query}'."
+
+    # Format chunk results
+    lines = [f"Found {len(results)} relevant chunk(s) matching '{query}':\n"]
+    for i, result in enumerate(results, 1):
+        # Truncate chunk content for display (first 200 chars)
+        content_snippet = result.get("content", "")[:200]
+        if len(result.get("content", "")) > 200:
+            content_snippet += "..."
+
+        lines.append(
+            f"{i}. {result['resource_name']} (chunk {result.get('chunk_index', 0)})\n"
+            f"   Path: {result['file_path']}\n"
+            f"   Score: {result.get('score', 0):.4f}\n"
+            f"   Content: {content_snippet}"
+        )
+
+    return "\n".join(lines)
 
 
 @app.tool()
