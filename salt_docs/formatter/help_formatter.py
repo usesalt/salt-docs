@@ -45,7 +45,6 @@ def print_enhanced_help():
     """Print enhanced help with logo, colors, and structure."""
     # Print logo
     print_logo()
-    print()
 
     # Print structured help sections
     _print_usage_section()
@@ -62,7 +61,7 @@ def _print_usage_section():
         f"{HelpColors.LIGHT_GRAY}┌─ {HelpColors.WHITE}{HelpIcons.USAGE} USAGE{HelpColors.RESET}"
     )
     print(
-        f"{HelpColors.LIGHT_GRAY}├─ {HelpColors.MEDIUM_GRAY}{CLI_ENTRY_POINT} [-h] run [url|path] [OPTIONS...]{HelpColors.RESET}"
+        f"{HelpColors.LIGHT_GRAY}└─ {HelpColors.MEDIUM_GRAY}{CLI_ENTRY_POINT} [-h] run [url|path] [OPTIONS...]{HelpColors.RESET}"
     )
     print()
 
@@ -82,7 +81,7 @@ def _print_source_section():
         f"{HelpColors.LIGHT_GRAY}│  {HelpColors.DARK_GRAY}                            {HelpIcons.INFO} path: Local directory path (e.g., /path/to/project){HelpColors.RESET}"
     )
     print(
-        f"{HelpColors.LIGHT_GRAY}│  {HelpColors.DARK_GRAY}                            {HelpIcons.INFO} (no argument): Current directory{HelpColors.RESET}"
+        f"{HelpColors.LIGHT_GRAY}└─ {HelpColors.DARK_GRAY}                            {HelpIcons.INFO} (no argument): Current directory{HelpColors.RESET}"
     )
     print()
 
