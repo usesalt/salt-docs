@@ -38,9 +38,6 @@ def print_input_prompt(label, icon, is_required=True, default_value=None):
     )
 
 
-
-
-
 def print_init_complete(config_path, output_dir, keyring_available):
     """Print the final completion message."""
     print(

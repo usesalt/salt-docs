@@ -53,8 +53,12 @@ def _is_url(source: str) -> bool:
 def _run_documentation_generation(repo_url, local_dir, args, config):
     """Shared logic for running documentation generation."""
     # Detect CI environment
-    is_ci = getattr(args, 'ci', False) or os.environ.get('CI', '').lower() in ('true', '1', 'yes')
-    
+    is_ci = getattr(args, "ci", False) or os.environ.get("CI", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+
     # Get GitHub token from argument, config, or environment variable
     github_token = None
     if repo_url:
@@ -71,10 +75,10 @@ def _run_documentation_generation(repo_url, local_dir, args, config):
 
     # Merge config with CLI args (CLI takes precedence)
     final_config = merge_config_with_args(config, args)
-    
+
     # Handle custom output path (for CI workflows)
     output_dir = final_config["output_dir"]
-    if hasattr(args, 'output_path') and args.output_path:
+    if hasattr(args, "output_path") and args.output_path:
         # Custom output path specified (e.g., 'docs/', 'documentation/')
         output_dir = args.output_path
 
@@ -107,8 +111,8 @@ def _run_documentation_generation(repo_url, local_dir, args, config):
         "documentation_mode": final_config.get("documentation_mode", "minimal"),
         # CI-specific flags
         "ci_mode": is_ci,
-        "update_mode": getattr(args, 'update', False),
-        "check_changes": getattr(args, 'check_changes', False),
+        "update_mode": getattr(args, "update", False),
+        "check_changes": getattr(args, "check_changes", False),
         # Outputs will be populated by the nodes
         "files": [],
         "abstractions": [],
@@ -126,7 +130,7 @@ def _run_documentation_generation(repo_url, local_dir, args, config):
     print_info("LLM caching", "Enabled" if final_config["use_cache"] else "Disabled")
     if is_ci:
         print_info("CI Mode", "Enabled")
-    if hasattr(args, 'output_path') and args.output_path:
+    if hasattr(args, "output_path") and args.output_path:
         print_info("Output Path", args.output_path)
 
     # Create the flow instance
@@ -146,7 +150,7 @@ def _run_documentation_generation(repo_url, local_dir, args, config):
         # Check for updates (non-blocking, only if 24 hours have passed)
         if not is_ci:
             _check_for_updates_quietly()
-            
+
         # Handle change detection for CI
         if shared.get("check_changes"):
             # If docs were changed, exit with code 1
@@ -261,7 +265,7 @@ def main():
                 formatter_class=argparse.RawDescriptionHelpFormatter,
                 add_help=False,  # Disable default help to use our custom one
             )
-            
+
             _add_common_arguments(parser, config)
 
             args = parser.parse_args()
@@ -297,7 +301,7 @@ def main():
     )
 
     _add_common_arguments(parser, config)
-    
+
     # Create mutually exclusive group for source
     source_group = parser.add_mutually_exclusive_group(required=False)
     source_group.add_argument("--repo", help="URL of the public GitHub repository.")
@@ -663,9 +667,6 @@ def update_api_key(provider: str):
     except ValueError as e:
         print(f"✘ {e}")
         print("Available providers: gemini, openai, anthropic, openrouter")
-
-
-
 
 
 def update_github_token():
