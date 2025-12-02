@@ -38,18 +38,7 @@ def print_input_prompt(label, icon, is_required=True, default_value=None):
     )
 
 
-def print_input_result(label, value, is_masked=False):
-    """Print the result of an input with proper masking and tree structure."""
-    if is_masked and value and value != "[skipped]":
-        display_value = "*" * min(len(value), 30)
-    else:
-        display_value = value
 
-    # Display the result on a new line with proper tree structure
-    print(
-        f"{Colors.LIGHT_GRAY}{Tree.VERTICAL}  {Colors.LIGHT_GRAY}{Tree.VERTICAL}  "
-        f"{Colors.MEDIUM_GRAY}→ {display_value}{Colors.RESET}"
-    )
 
 
 def print_init_complete(config_path, output_dir, keyring_available):

@@ -690,13 +690,7 @@ def update_gemini_key():
     update_api_key("gemini")
 
 
-def update_gemini_key_direct(new_key: str) -> None:
-    """Update Gemini API key directly. Legacy function."""
-    if not new_key:
-        print("✘ API key cannot be empty")
-        return
 
-    _update_secret("gemini_api_key", new_key, "Gemini API key", allow_empty=False)
 
 
 def update_github_token():

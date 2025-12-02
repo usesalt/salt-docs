@@ -1,38 +1,15 @@
 ![Salt Docs](assets/saltdocs.jpg)
 
-## How it works
 
-```mermaid
-flowchart LR
-    subgraph Input["Code Source"]
-        Source1[GitHub Repository]
-        Source2[Local Directory]
-    end
+## SALT DOCS
 
-    subgraph Pipeline["Salt Docs Pipeline"]
-        Crawl[Crawl & Analyze]
-        Identify[LLM Identify Abstractions]
-        Generate[Generate Markdown Docs]
-    end
+[![PyPI](https://img.shields.io/badge/pypi-v0.2.4-blue)](https://pypi.org/project/salt-docs/) [![Python](https://img.shields.io/badge/python-3.12+-blue)](https://www.python.org/) [![Downloads](https://img.shields.io/badge/downloads-3k+-brightgreen)](https://pypi.org/project/salt-docs/) [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE) [![GitHub](https://img.shields.io/badge/github-usesalt%2Fsalt--docs-red)](https://github.com/usesalt/salt-docs)
 
-    subgraph Output["Local Wiki"]
-        Docs[Markdown Files]
-        MCP[MCP Server]
-    end
 
-    subgraph Assistants["AI Assistants"]
-        Cursor[Cursor]
-        Claude[Claude]
-        Continue[Continue]
-    end
 
-    Source1 --> Crawl
-    Source2 --> Crawl
-    Crawl --> Identify --> Generate --> Docs --> MCP
-    MCP --> Cursor
-    MCP --> Claude
-    MCP --> Continue
-```
+**Salt Docs** is a compact, human-readable documentation generator for codebases that minimizes tokens and makes structure easy for models to follow.  
+It's intended for **LLM input** as a drop-in, lossless representation of your existing codebase.
+
 
 ## Installation
 
