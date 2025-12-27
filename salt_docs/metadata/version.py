@@ -1,5 +1,5 @@
 """
-Version management for Salt Docs.
+Version management for WikiGen.
 Centralized version definition for consistency.
 """
 

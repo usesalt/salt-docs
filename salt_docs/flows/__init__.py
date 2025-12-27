@@ -1,1 +1,1 @@
-"""Flows module for Salt Docs."""
+"""Flows module for WikiGen."""

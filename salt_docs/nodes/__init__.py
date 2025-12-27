@@ -1,1 +1,1 @@
-"""Nodes module for Salt Docs."""
+"""Nodes module for WikiGen."""
